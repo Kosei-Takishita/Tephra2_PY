@@ -20,7 +20,7 @@ winddat_MSM.index = pd.to_datetime(winddat_MSM.index)
 validplist = pd.DataFrame([["erno0", "2021/1/1 0:00", "site0", "site1", np.nan, np.nan],
                            ["erno1", "2021/1/2 0:00", "site0", "site1", "site2",
                             np.nan]])  # pd.read_csv("", header=None, index_col=0)
-parsivel = pd.DataFrame(columns=['h', 'd', 'x', 'y'],
+site = pd.DataFrame(columns=['h', 'd', 'x', 'y'],
                         data=[[10, 500, 400, 300]],
                         index=[
                             'site0'])  # [m asl, m from the vent, m to the East from the vent, m to the North from the vent]
@@ -36,12 +36,7 @@ rho_a = 1.293  # kg/m^3
 rho_p = 2640  # kg/m^3
 K = 100  # m^2/s
 # mapping dem
-# point map... elevation data of sites for calculation, dem...elevation data of sites for drawing coastlines and contours 
-point_map = pd.DataFrame(
-    np.concatenate([np.array(np.meshgrid(np.arange(-3000, 3000, 300), np.arange(-2400, 2400, 300))).reshape(2, -1),
-                    np.ones((1, 320))]).T,
-    columns=["x", "y", "h"])  # pd.read_csv('', header=0) The real data is made from the GSI database
-demfilename = '../14-DEM/SakuraDEM.csv'  # made from GSI DEM data
+# demfilename = 'SakuraDEM.csv'  made from GSI DEM data
 dem = pd.DataFrame([[-9999, -9999, -9999, -9999, -9999],
                     [-9999, -9999, 5, 5, -9999],
                     [-9999, 10, 20, 15, 5],
@@ -98,8 +93,8 @@ def output(erno):
     K = 100
     # input ejecta and wind and calculate tephra-fall load every v_t interval
     p_valid = validplist.loc[erno, 2:][validplist.loc[erno, 2:] == validplist.loc[erno, 2:]].values
-    point = parsivel.loc[p_valid, :]
-    h_p = np.unique(point["h"]).astype(int)
+    point = site.loc[p_valid, :]
+    h_site = np.unique(point["h"]).astype(int)
     h_p = erupt.loc[erno, "h_p"]
     shokichi = pd.DataFrame(columns=range(vent_elevation + 100, h_p + vent_elevation + 100, 100),
                             index=[0.0250, 0.0433, 0.0559, 0.0662, 0.0751, 0.0830, 0.0902, 0.0969, 0.106, 0.119, 0.137,
@@ -139,8 +134,8 @@ def output(erno):
         for i in range(len(coordinate)):
             coordinate.iloc[i, 4:] = [np.dot(coordinate.iloc[:i + 1, 0], coordinate.iloc[:i + 1, 2]),
                                       np.dot(coordinate.iloc[:i + 1, 0], coordinate.iloc[:i + 1, 3])]
-        output_newx = pd.DataFrame(columns=shokichi.columns, index=h_p)
-        output_newy = pd.DataFrame(columns=shokichi.columns, index=h_p)
+        output_newx = pd.DataFrame(columns=shokichi.columns, index=h_site)
+        output_newy = pd.DataFrame(columns=shokichi.columns, index=h_site)
         traj_x = interp1d(coordinate.index, coordinate["x"], fill_value="extrapolate")
         traj_y = interp1d(coordinate.index, coordinate["y"], fill_value="extrapolate")
         t_seg = 0.0032 * (shokichi.columns - vent_elevation) ** 2 / K
@@ -148,8 +143,8 @@ def output(erno):
         # surface site altitude, the coordinates of the center of tephra dispersion segregating from each height to each
         # site altitude are obtained and tabulated.
         for h_seg in shokichi.columns:
-            output_newx[h_seg] = list(map(lambda h: coordinate.iloc[h_seg // 100 - 1, 4] - traj_x(h - 100), h_p))
-            output_newy[h_seg] = list(map(lambda h: coordinate.iloc[h_seg // 100 - 1, 5] - traj_y(h - 100), h_p))
+            output_newx[h_seg] = list(map(lambda h: coordinate.iloc[h_seg // 100 - 1, 4] - traj_x(h - 100), h_site))
+            output_newy[h_seg] = list(map(lambda h: coordinate.iloc[h_seg // 100 - 1, 5] - traj_y(h - 100), h_site))
 
         def w1(i):
             n = int(point.loc[i, "h"])
@@ -263,7 +258,7 @@ def calash(erno):
         direc1 + "load3_er" + str(erno) + "_tephra2PY.csv", index=False)
 
 
-for erno in [18223, 18242, 18254, 18418, 19099, 19100]:
+for erno in [21001, 21002]:
     h, vx, vy = wind(erno)
     pd.DataFrame(np.array([h, vx, vy]).T, columns=["h", "x", "y"]).to_csv("wind" + str(erno) + "_100m.csv")
     output(erno)
